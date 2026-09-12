@@ -20,17 +20,22 @@
 </head>
 <body>
   <h1>Video Host Utility</h1>
-  <p class="sub">Upload a video, get back a direct URL. That's it. No accounts, nothing saved anywhere but this list.</p>
+  <p class="sub">Upload a video, get back a real hosted page with it embedded. That's it. No
+  accounts, nothing saved anywhere but this list.</p>
 
   <form id="upload-form">
     <input type="file" name="video" id="file-input" required />
+    <br />
+    <input type="text" name="slug" id="slug-input" placeholder="Page name, e.g. creator-1 (optional)" />
+    <br />
+    <input type="text" name="title" id="title-input" placeholder="Page title (optional)" />
     <br />
     <button type="submit">Upload</button>
   </form>
   <div id="status"></div>
 
   <table>
-    <thead><tr><th>File</th><th>Size</th><th>URL</th><th></th></tr></thead>
+    <thead><tr><th>Page</th><th>Size</th><th>Page URL</th><th></th></tr></thead>
     <tbody id="files-body"><tr><td colspan="4">Loading…</td></tr></tbody>
   </table>
 
@@ -40,6 +45,7 @@ const statusEl = document.getElementById('status');
 const filesBody = document.getElementById('files-body');
 
 function fmtSize(bytes) {
+  if (bytes == null) return '—';
   if (bytes > 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   return Math.round(bytes / 1024) + ' KB';
 }
@@ -53,10 +59,10 @@ async function loadFiles() {
   }
   filesBody.innerHTML = data.files.map(function (f) {
     return '<tr>' +
-      '<td>' + f.filename + '</td>' +
+      '<td>' + f.title + '</td>' +
       '<td>' + fmtSize(f.size_bytes) + '</td>' +
-      '<td><code>' + f.url + '</code></td>' +
-      '<td><button class="copy" data-url="' + f.url + '">Copy</button></td>' +
+      '<td><code>' + f.page_url + '</code></td>' +
+      '<td><button class="copy" data-url="' + f.page_url + '">Copy</button></td>' +
     '</tr>';
   }).join('');
 }
@@ -76,6 +82,8 @@ form.addEventListener('submit', async function (e) {
   if (!fileInput.files[0]) return;
   const body = new FormData();
   body.append('video', fileInput.files[0]);
+  body.append('slug', document.getElementById('slug-input').value);
+  body.append('title', document.getElementById('title-input').value);
   statusEl.className = '';
   statusEl.textContent = 'Uploading…';
   try {
@@ -83,7 +91,7 @@ form.addEventListener('submit', async function (e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Upload failed.');
     statusEl.className = 'success';
-    statusEl.textContent = 'Uploaded. Direct URL: ' + data.url;
+    statusEl.textContent = 'Uploaded. Page URL: ' + data.page_url;
     form.reset();
     await loadFiles();
   } catch (err) {
