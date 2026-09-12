@@ -1,0 +1,17 @@
+{
+  "name": "nextweb-video-host-utility",
+  "version": "0.1.0",
+  "description": "Throwaway helper: upload a handful of video files, get back real direct public URLs. Not part of NextWeb/DiscoverWebsites.com itself.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.2"
+  },
+  "engines": {
+    "node": ">=20.18.1"
+  }
+}

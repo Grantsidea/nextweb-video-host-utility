@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Video Host Utility</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #111; }
+  h1 { font-size: 18px; }
+  p.sub { color: #666; }
+  input[type="file"] { margin: 12px 0; }
+  button { padding: 8px 14px; cursor: pointer; }
+  #status { margin-top: 10px; font-size: 13px; }
+  #status.error { color: #b42318; }
+  #status.success { color: #1a7f37; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ddd; word-break: break-all; }
+  code { background: #f2f2f2; padding: 2px 5px; border-radius: 4px; }
+  button.copy { font-size: 12px; padding: 3px 8px; }
+</style>
+</head>
+<body>
+  <h1>Video Host Utility</h1>
+  <p class="sub">Upload a video, get back a direct URL. That's it. No accounts, nothing saved anywhere but this list.</p>
+
+  <form id="upload-form">
+    <input type="file" name="video" id="file-input" required />
+    <br />
+    <button type="submit">Upload</button>
+  </form>
+  <div id="status"></div>
+
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>URL</th><th></th></tr></thead>
+    <tbody id="files-body"><tr><td colspan="4">Loading…</td></tr></tbody>
+  </table>
+
+<script>
+const form = document.getElementById('upload-form');
+const statusEl = document.getElementById('status');
+const filesBody = document.getElementById('files-body');
+
+function fmtSize(bytes) {
+  if (bytes > 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return Math.round(bytes / 1024) + ' KB';
+}
+
+async function loadFiles() {
+  const res = await fetch('/api/files');
+  const data = await res.json();
+  if (data.files.length === 0) {
+    filesBody.innerHTML = '<tr><td colspan="4">No uploads yet.</td></tr>';
+    return;
+  }
+  filesBody.innerHTML = data.files.map(function (f) {
+    return '<tr>' +
+      '<td>' + f.filename + '</td>' +
+      '<td>' + fmtSize(f.size_bytes) + '</td>' +
+      '<td><code>' + f.url + '</code></td>' +
+      '<td><button class="copy" data-url="' + f.url + '">Copy</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+filesBody.addEventListener('click', function (e) {
+  const btn = e.target.closest('button.copy');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.url).then(function () {
+    btn.textContent = 'Copied!';
+    setTimeout(function () { btn.textContent = 'Copy'; }, 1200);
+  });
+});
+
+form.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('file-input');
+  if (!fileInput.files[0]) return;
+  const body = new FormData();
+  body.append('video', fileInput.files[0]);
+  statusEl.className = '';
+  statusEl.textContent = 'Uploading…';
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: body });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed.');
+    statusEl.className = 'success';
+    statusEl.textContent = 'Uploaded. Direct URL: ' + data.url;
+    form.reset();
+    await loadFiles();
+  } catch (err) {
+    statusEl.className = 'error';
+    statusEl.textContent = err.message;
+  }
+});
+
+loadFiles();
+</script>
+</body>
+</html>
